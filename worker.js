@@ -70,6 +70,7 @@ export default {
         {
           ok: false,
           error: err.message || "Không thể bóc tách liên kết này, vui lòng thử lại.",
+          debug: err.debug || undefined,
         },
         500,
         corsHeaders
@@ -389,11 +390,13 @@ async function extractTikTok(rawUrl, mode, origin) {
   if (!d) {
     console.log("[tiktok] errors:", JSON.stringify(errors));
     const limited = errors.some((e) => /limit/i.test(e));
-    throw new Error(
+    const failure = new Error(
       limited
         ? "Các nguồn tải đang quá tải hoặc hết hạn mức hôm nay. Vui lòng thử lại sau ít phút."
         : "Không lấy được dữ liệu từ liên kết TikTok này (mọi nguồn đều lỗi)."
     );
+    failure.debug = errors;
+    throw failure;
   }
 
   const id = d.id || awemeId || Date.now();
