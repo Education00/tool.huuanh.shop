@@ -573,7 +573,7 @@ async function analyzeUrl(rawUrl,forcedKind){
     }catch(e){}
    }
    if(data&&data.ok===false){
-    if(data.debug)console.log("debug",data.debug);
+    if(data.debug){console.log("debug",data.debug);$("#res").innerHTML='<article class="rcard"><b>Chi tiết lỗi (gửi ảnh này để được hỗ trợ)</b><pre style="white-space:pre-wrap;word-break:break-all;font-size:.74rem;color:var(--muted);margin:10px 0 0">'+H(data.debug.join("\n"))+'</pre></article>'}
     btn.classList.remove("busy");btn.disabled=false;txt.textContent="Phân tích & lấy link tải";
     toast(data.error||"Không thể bóc tách liên kết này");
     return;
