@@ -323,7 +323,7 @@ body.rm *,body.rm *::before,body.rm *::after{transition:none!important;animation
 
 <script>
 const $=s=>document.querySelector(s),H=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const API_URL="https://tool-huuanh-shop.tt572880.workers.dev";
+const API_URL="";
 const DEF_CFG={theme:"system",font:"md",noWm:true,saveHis:true,motion:true,api:API_URL};
 let cfg={...DEF_CFG},his=[],curMode="auto",curItem=null,selSlides=new Set([0,1,2]);
 try{cfg={...DEF_CFG,...JSON.parse(localStorage.getItem("hu_dl_cfg")||"{}")}}catch(e){}
@@ -559,28 +559,36 @@ async function analyzeUrl(rawUrl,forcedKind){
  const btn=$("#btn-go"),txt=$("#go-txt");
  btn.classList.add("busy");btn.disabled=true;txt.textContent="Đang bóc tách media không logo…";
  const kind=forcedKind||detectKind(u,curMode);
- const apiEndpoint=API_URL||cfg.api;
+ const apiEndpoint=API_URL||cfg.api||(location.protocol.startsWith("http")?"/api":"");
  let item=null;
  if(apiEndpoint){
   try{
-   const res=await fetch(apiEndpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:u,mode:kind})});
-   const data=await res.json();
+   const callApi=async pre=>{const r=await fetch(apiEndpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(pre?{url:u,mode:kind,preloaded:pre}:{url:u,mode:kind})});return r.json()};
+   let data=await callApi();
+   if(data&&data.ok===false&&kind!=="yt"){
+    try{
+     const r=await fetch("https://www.tikwm.com/api/?url="+encodeURIComponent(u)+"&hd=1");
+     const j=await r.json();
+     if(j&&j.code===0&&j.data){const d2=await callApi(j.data);if(d2&&d2.ok!==false)data=d2}
+    }catch(e){}
+   }
    if(data&&data.ok===false){
+    if(data.debug)console.log("debug",data.debug);
     btn.classList.remove("busy");btn.disabled=false;txt.textContent="Phân tích & lấy link tải";
     toast(data.error||"Không thể bóc tách liên kết này");
     return;
    }
    if(data&&data.title)item=data;
   }catch(e){
-   toast("Không kết nối được máy chủ API, hiển thị bản mô phỏng");
+   btn.classList.remove("busy");btn.disabled=false;txt.textContent="Phân tích & lấy link tải";
+   toast("Không kết nối được máy chủ API");
+   return;
   }
  }
  if(!item){
-  await new Promise(r=>setTimeout(r,550));
-  item={...SAMPLES[kind],url:u};
-  if(!Object.values(SAMPLES).some(s=>s.url===u)){
-   item.title=`Media bóc tách từ liên kết (${u.slice(0,38)}…)`;
-  }
+  btn.classList.remove("busy");btn.disabled=false;txt.textContent="Phân tích & lấy link tải";
+  toast("Máy chủ không trả về dữ liệu hợp lệ");
+  return;
  }
  btn.classList.remove("busy");btn.disabled=false;txt.textContent="Phân tích & lấy link tải";
  const slideCount=Array.isArray(item.slides)?item.slides.length:4;
@@ -749,8 +757,9 @@ sh.addEventListener("click",e=>{
  if(m){
   const k=m.dataset.m;
   goto("dl");menu(false);
-  urlIn.value=SAMPLES[k].url;btnClr.hidden=false;
-  analyzeUrl(SAMPLES[k].url,k);
+  curMode=k;
+  if(urlIn.value.trim())analyzeUrl(urlIn.value,k);
+  else{urlIn.focus();toast("Đã chọn: "+m.firstChild.textContent+" — hãy dán link vào ô");}
   return;
  }
  if(e.target.closest("a,button"))menu(false);
